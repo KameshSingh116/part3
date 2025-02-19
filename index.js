@@ -1,3 +1,5 @@
+// index.js
+
 const express = require('express');
 const app = express();
 
@@ -41,6 +43,18 @@ app.get('/api/info', (request, response) => {
         <p>${currentTime}</p>
     `;
     response.send(info);
+});
+
+// New route handler for fetching a person by ID
+app.get('/api/persons/:id', (request, response) => {
+    const id = request.params.id;
+    const person = persons.find(p => p.id === id);
+
+    if (person) {
+        response.json(person);
+    } else {
+        response.status(404).send({ error: 'Person not found' });
+    }
 });
 
 const port = 3001;
