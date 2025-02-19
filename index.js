@@ -56,13 +56,36 @@ app.get('/api/persons/:id', (request, response) => {
     }
 });
 
-// New route handler for deleting a person by ID
-app.delete('/api/persons/:id', (request, response) => {
-    const id = request.params.id;
-    persons = persons.filter(p => p.id !== id);
+// New route handler for adding a person
+app.post('/api/persons', (request, response) => {
+    const body = request.body;
 
-    response.status(204).end();
+    if (!body.name || !body.number) {
+        return response.status(400).json({ error: 'Name or number is missing' });
+    }
+
+    const nameExists = persons.some(person => person.name === body.name);
+    if (nameExists) {
+        return response.status(400).json({ error: 'Name must be unique' });
+    }
+
+    const newPerson = {
+        id: generateId(),
+        name: body.name,
+        number: body.number,
+    };
+
+    persons = persons.concat(newPerson);
+    response.json(newPerson);
 });
+
+// Function to generate a unique ID
+const generateId = () => {
+    const maxId = persons.length > 0
+        ? Math.max(...persons.map(p => Number(p.id)))
+        : 0;
+    return String(maxId + 1);
+};
 
 const port = 3001;
 app.listen(port, () => {
