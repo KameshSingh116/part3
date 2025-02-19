@@ -45,7 +45,6 @@ app.get('/api/info', (request, response) => {
     response.send(info);
 });
 
-// New route handler for fetching a person by ID
 app.get('/api/persons/:id', (request, response) => {
     const id = request.params.id;
     const person = persons.find(p => p.id === id);
@@ -55,6 +54,14 @@ app.get('/api/persons/:id', (request, response) => {
     } else {
         response.status(404).send({ error: 'Person not found' });
     }
+});
+
+// New route handler for deleting a person by ID
+app.delete('/api/persons/:id', (request, response) => {
+    const id = request.params.id;
+    persons = persons.filter(p => p.id !== id);
+
+    response.status(204).end();
 });
 
 const port = 3001;
