@@ -3,12 +3,29 @@ GET http://localhost:3002/api/notes/1
 GET http://localhost:3002/
 
 DELETE http://localhost:3001/api/persons/1
-###
 
 POST http://localhost:3001/api/persons
 Content-Type: application/json
 
 {
-    "name": "Aboobacker",
-    "number": "99191991991"
+    "name": "John Doe",
+    "number": "123-4567890"
+}
+
+###
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Jane tre",
+    "number":"123456321876"
+}
+
+###
+POST http://localhost:3001/api/persons
+Content-Type: application/json
+
+{
+    "name": "Arto Hellas",
+    "number": "123-4567890"
 }
