@@ -1,93 +1,117 @@
-// index.js
-
+require('dotenv').config();
 const express = require('express');
-const app = express();
+const morgan = require('morgan');
+const cors = require('cors');
+const Contact = require('./models/contacts.js');
 
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(express.static('dist'));
+app.use(cors());
 app.use(express.json());
 
-let persons = [
-    { 
-      id: "1",
-      name: "Arto Hellas", 
-      number: "040-123456"
-    },
-    { 
-      id: "2",
-      name: "Ada Lovelace", 
-      number: "39-44-5323523"
-    },
-    { 
-      id: "3",
-      name: "Dan Abramov", 
-      number: "12-43-234345"
-    },
-    { 
-      id: "4",
-      name: "Mary Poppendieck", 
-      number: "39-23-6423122"
-    }
-];
+// Morgan Logging
+morgan.token('body', (req) => JSON.stringify(req.body));
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
 
-app.get('/', (request, response) => {
-    response.send('<h1>Phonebook Backend</h1>');
-});
-
-app.get('/api/persons', (request, response) => {
-    response.json(persons);
-});
-
-app.get('/api/info', (request, response) => {
-    const currentTime = new Date();
-    const info = `
-        <p>Phonebook has info for ${persons.length} people</p>
-        <p>${currentTime}</p>
-    `;
-    response.send(info);
-});
-
-app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id;
-    const person = persons.find(p => p.id === id);
-
-    if (person) {
-        response.json(person);
-    } else {
-        response.status(404).send({ error: 'Person not found' });
-    }
-});
-
-// New route handler for adding a person
-app.post('/api/persons', (request, response) => {
-    const body = request.body;
-
-    if (!body.name || !body.number) {
-        return response.status(400).json({ error: 'Name or number is missing' });
-    }
-
-    const nameExists = persons.some(person => person.name === body.name);
-    if (nameExists) {
-        return response.status(400).json({ error: 'Name must be unique' });
-    }
-
-    const newPerson = {
-        id: generateId(),
-        name: body.name,
-        number: body.number,
-    };
-
-    persons = persons.concat(newPerson);
-    response.json(newPerson);
-});
-
-// Function to generate a unique ID
-const generateId = () => {
-    const maxId = persons.length > 0
-        ? Math.max(...persons.map(p => Number(p.id)))
-        : 0;
-    return String(maxId + 1);
+// Error Handler Middleware
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message);
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' });
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message });
+  }
+  next(error);
 };
 
-const port = 3001;
-app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+// Unknown Endpoint Middleware
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' });
+};
+
+// Routes
+
+// Get all contacts
+app.get('/api/persons', (req, res, next) => {
+  Contact.find({})
+    .then((contacts) => res.json(contacts))
+    .catch(next);
+});
+
+// Get contact by ID
+app.get('/api/persons/:id', (req, res, next) => {
+  Contact.findById(req.params.id)
+    .then((contact) => {
+      if (contact) {
+        res.json(contact);
+      } else {
+        res.status(404).end();
+      }
+    })
+    .catch(next);
+});
+
+// Delete contact
+app.delete('/api/persons/:id', (req, res, next) => {
+  Contact.findByIdAndDelete(req.params.id)
+    .then(() => res.status(204).end())
+    .catch(next);
+});
+
+// Add new contact
+app.post('/api/persons', (req, res, next) => {
+  const { name, number } = req.body;
+
+  if (!name || !number) {
+    return res.status(400).json({ error: 'name or number missing' });
+  }
+
+  const newContact = new Contact({ name, number });
+
+  newContact
+    .save()
+    .then((savedContact) => res.json(savedContact))
+    .catch(next);
+});
+
+// Update contact
+app.put('/api/persons/:id', (req, res, next) => {
+  const { name, number } = req.body;
+
+  if (!name || !number) {
+    return res.status(400).json({ error: 'name or number missing' });
+  }
+
+  Contact.findByIdAndUpdate(req.params.id, { name, number }, { new: true, runValidators: true, context: 'query' })
+    .then((updatedContact) => {
+      if (updatedContact) {
+        res.json(updatedContact);
+      } else {
+        res.status(404).end();
+      }
+    })
+    .catch(next);
+});
+
+// Info Route
+app.get('/info', (req, res, next) => {
+  Contact.countDocuments({})
+    .then((count) => {
+      res.send(`
+        <p>Phonebook has info for ${count} people</p>
+        <p>${new Date()}</p>
+      `);
+    })
+    .catch(next);
+});
+
+app.use(unknownEndpoint);
+app.use(errorHandler);
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
