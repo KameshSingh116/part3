@@ -3,6 +3,7 @@ const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const Contact = require('./models/contacts.js');
+const contactsRouter = require('./routes/contacts');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,6 +12,7 @@ const PORT = process.env.PORT || 3001;
 app.use(express.static('dist'));
 app.use(cors());
 app.use(express.json());
+app.use('/api/persons', contactsRouter);
 
 // Morgan Logging
 morgan.token('body', (req) => JSON.stringify(req.body));
@@ -31,70 +33,6 @@ const errorHandler = (error, request, response, next) => {
 const unknownEndpoint = (request, response) => {
   response.status(404).send({ error: 'unknown endpoint' });
 };
-
-// Routes
-
-// Get all contacts
-app.get('/api/persons', (req, res, next) => {
-  Contact.find({})
-    .then((contacts) => res.json(contacts))
-    .catch(next);
-});
-
-// Get contact by ID
-app.get('/api/persons/:id', (req, res, next) => {
-  Contact.findById(req.params.id)
-    .then((contact) => {
-      if (contact) {
-        res.json(contact);
-      } else {
-        res.status(404).end();
-      }
-    })
-    .catch(next);
-});
-
-// Delete contact
-app.delete('/api/persons/:id', (req, res, next) => {
-  Contact.findByIdAndDelete(req.params.id)
-    .then(() => res.status(204).end())
-    .catch(next);
-});
-
-// Add new contact
-app.post('/api/persons', (req, res, next) => {
-  const { name, number } = req.body;
-
-  if (!name || !number) {
-    return res.status(400).json({ error: 'name or number missing' });
-  }
-
-  const newContact = new Contact({ name, number });
-
-  newContact
-    .save()
-    .then((savedContact) => res.json(savedContact))
-    .catch(next);
-});
-
-// Update contact
-app.put('/api/persons/:id', (req, res, next) => {
-  const { name, number } = req.body;
-
-  if (!name || !number) {
-    return res.status(400).json({ error: 'name or number missing' });
-  }
-
-  Contact.findByIdAndUpdate(req.params.id, { name, number }, { new: true, runValidators: true, context: 'query' })
-    .then((updatedContact) => {
-      if (updatedContact) {
-        res.json(updatedContact);
-      } else {
-        res.status(404).end();
-      }
-    })
-    .catch(next);
-});
 
 // Info Route
 app.get('/info', (req, res, next) => {
